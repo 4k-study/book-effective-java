@@ -1,23 +1,5 @@
 # Item 11. equals를 재정의하려거든 hashCode도 재정의하라
 
-equals를 재정의하고 hashCode를 재정의하지 않는 경우 hashCode 일반 규약을 어기게 된다.
-
-이는 HashMap, HashSet같은 컬렉션 원소로 사용할때 문제가 생긴다.
-
-이때 파생필드와 equals에 사용되지 않는 필드는 제외한다.
-
-성능이 느리지만 Guava의 Hashing을 사용해도 좋다.
-
-해시코드 계산 비용이 크다면 캐싱을 사용해도 좋다.
-
-결론
-
-equals를 재정의하면 hashCode도 반드시 재정의 해야한다. 그렇지 않으면 제대로 동작하지 않음
-
-hashCode도 equals와 동일하게 일반 규약을 따르게 해야하고 equals가 true라면 같은 hashCode를 false라면 다른 hashCode를 반환해야 한다. AutoValue는 hashCode도 자동생성 해준다.
-
-#################
-
 equals를 재정의한 클래스는 반드시 hashCode도 재정의 해야한다. 그렇지 않는 경우 hashCode 일반 규약을 어기고, hash를 사용할때 문제가 발생한다.
 
 hashCode 메서드의 일반 규약
