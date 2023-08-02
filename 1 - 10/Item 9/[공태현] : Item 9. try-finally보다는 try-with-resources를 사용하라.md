@@ -1,87 +1,116 @@
-## equals란?
+- 자바 라이브러리에는 `close()` 메소드를 호출하여 직접 닫아줘야 하는 자원이 많음
+    - `InputStream`, `OutputStream`, `java.sql.Connection`
+- 하지만 실수로 개발자가 `close()` 메소드 호출을 해주지 않는다면 성능 문제가 발생할 수 있음
 
-<aside>
-💡 equals() 메서드는 Object 객체에 정의된 메서드로 기본적으로 객체의 주소를 비교한다.
-
-</aside>
+## 전통적인 방법: try-finally
 
 ```java
-Data d1 = new Data("Kong", 10);
-Data d2 = new Data("Kong", 10);
-
-System.out.println(d2.equals(d1));
+BufferedReader br = new BufferedReader(new FileReader(path));
+try {
+	return br.readLine();
+} finally {
+	br.close();
+}
 ```
 
-따라서 위 코드는 `false`를 반환한다.
+괜찮은 방법이지만 사용하는 자원이 많을수록 호출해야할 `close()` 메소드 수가 많아지기 때문에 코드가 지저분해질 수 있다.
 
-## equals를 재정의 하지 않아야될 상황
+### 문제점
 
-- **각 인스턴스가 본질적으로 고유하다.**
-    - 값을 표현하는 객체가 아닌 동작하는 객체
-- **인스턴스 간 논리적으로 같은지 확인할 필요가 없는 경우**
-- **상위 클래스에서 재정의한 equals()가 하위 클래스에도 들어맞는 경우**
-- **클래스가 private이거나 패키지가 private이고 equals 메서드를 호출할 일이 없는 경우**
+위 코드에서 `br.readLine()` 부분과 `br.close()` 부분 모두에서 예외가 발생한다면 `br.close()`에서 발생한 예외가 던져지고 처음 예외가 발생했던 `br.readLine()` 부분은 생략된다. 이렇게 되면 첫 번째 예외가 발생한 부분을 찾지 못하여 디버깅이 어려워진다. 
 
-## equals를 재정의해야 하는 경우
+## 해결법: try-with-resources
 
-→ 객체가 논리적 동치성을 확인해야 하는데, 상위 클래스의 `equals()`가 논리적 동치성을 비교하도록 재정의 되지 않았을 경우 (즉, 객체의 값을 비교해야 하는 경우)
+- `AutoCloseable` 인터페이스를 구현한 자원인 경우 자동으로 `close()` 메소드를 호출해준다.
 
-## equals 메서드의 재정의 규약
+```java
+try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+	return br.readLine();
+}
+```
 
-- 반사성: `x.equals(x)`는 `true`
-- 대칭성: `x.equals(y)`가 `true`이면 `y.equals(x)`는 `true`이다.
-- 추이성: `x.euqals(y)`가 `true`이고, `y.equals(z)`가 `true`이면 `x.equals(z)`도 `true`이다.
-- 일관성: `x.equals(y)`를 반복해서 호출하면 항상 `true`거나, 항상 `false`여야 한다.
-- null 아님: `null`이 아닌 모든 참조 값 `x`에 대해, `x.equals(null)`은 `false`이다.
+- 코드가 짧아져 가독성이 좋아진다.
+- 위 코드를 보면 `br.readLine()`에서 예외가 발생했을 경우 추적이 가능해진다. (앞선 문제 해결)
+    - 만약 `close()` 메소드 호출 시 예외가 발생해도 숨겨졌다는 의미인 suppressed라는 키워드를 달고 예외가 출력된다.
 
-### 반사성
+```java
+public class ResourceTest {
+    public static void main(String[] args) throws Exception {
 
-- 객체는 자기 자신과 같아야 함
+        MyResource resource = new MyResource();
 
-### 대칭성
+        try {
+            resource.use();
+        } finally {
+            resource.close();
+        }
+        
 
-- 두 객체는 서로에 대한 동치 여부에 똑같이 답해야 한다.
+    }
 
-### 추이성
+    static class MyResource implements AutoCloseable {
 
-- 첫 번째 객체와 두 번째 객체가 같고, 두 번째 객체와 세 번째 객체가 같다면, 첫 번째 객체와 세 번째 객체도 같아야 한다.
-- 상속 관계를 `equals()`로 비교할 때 추이성을 어길 수 있다.
-    - 하위타입1.equals(상위타입)가 true, 상위타입.equals(하위타입2)가 true일 때, 하위타입1.equals(하위타입2)가 false일 수 있음
-- 구체 클래스를 확장해 새로운 값을 추가하면서 equals 규약을 만족시킬 방법은 존재하지 않는다.
-    - 상속 대신 컴포지션을 사용하라
-- 상속 관계에서 `equals()` 메소드를 사용할 때 주의하자
-    - `Collection`에서 다형성을 활용할 때도 주의하자
+        public void use() {
+            throw new RuntimeException("use exception");
+        }
 
-### 일관성
+        @Override
+        public void close() throws Exception {
+            throw new RuntimeException("close exception");
+        }
+    }
+}
+```
 
-- 두 객체가 같다면 앞으로도 영원히 같아야 한다.
-- 불변 객체끼리의 `equals()` 메소드의 결과는 항상 동일한 결과를 반환해야 한다.
+위 코드에서 `try-finally`를 사용해서 자원을 사용하고, `close()`하였다. 그리고 각 메소드 호출 시 예외가 발생하도록 하였다.
 
-### null 아님
+![image](https://github.com/4k-study/book-effective-java/assets/68289543/48bd04bb-3189-4571-bd8e-7c9ca931fe87)
 
-- 모든 객체가 `null`과 같지 않아야 한다.
-- 일반적으로 `equals()` 메소드를 재정의할 때 인수로 들어온 객체의 타입을 확인하기 위해 `instance of`를 사용하는데 `instance of`는 첫 번째 인수가 `null`이면 `false`를 반환한다. → 묵시적 `null` 체크
+결과는 `use()` 메소드 호출 시 발생한 예외는 무시되고 `close()` 메소드 호출 시 발생했던 예외만 출력되었다.
 
-## 양질의 `equals` 메서드 구현법
+```java
+public class ResourceTest {
+    public static void main(String[] args) throws Exception {
 
-- ********`==` 연산자를 사용해 입력이 자기 자신의 참조인지 확인한다.**
-    - 성능 최적화용
-    - `(if o == this) return true`
-- `**instance of` 연산자로 입력이 올바른 타입인지 확인한다.**
-    - 보통 자신의 타입과 비교한다.
-    - 인터페이스를 구현한 클래스끼리 비교하는 경우 `instance of`의 두 번째 인수가 인터페이스가 될 수 있다.
-- **입력을 올바른 타입으로 형변환 해야한다.**
-    - `instance of`를 잘 사용했다면 항상 성공한다.
-- **입력 객체와 자기 자신의 대응되는 핵심 필드들이 모두 일치하는지 하나씩 검사한다.**
-    - 모든 필드가 일치하면 `true`, 하나라도 다르면 `false`
+        try (MyResource resource = new MyResource()) {
+            resource.use();
+        }
 
-## 추가
+    }
 
-- `float`과 `double`을 제외한 기본 타입 필드는 `==` 연산자로 비교하고 참조 타입 필드는 각각의 `equals()` 메서도드로, `float`과 `double` 필드는 각각 정적 메서드인 `Float.compare()`, `Double.compare()`로 비교한다.
-    - `Float.NaN`, `-0.0f` 등을 다뤄야 하기 때문
-    - `Float.equals()`는 오토박싱 때문에 성능이 안좋을 수 있음
-- `null`을 정상값으로 취급하는 참조 타입인 경우 `Object.equals()`를 사용하여 `NullPointerException`을 방지하자
-- 비교하기가 복잡한 필드를 가진 클래스인 경우 필드의 표준형을 저장해둔 후 표준형끼리 비교하면 훨씬 경제적이다.
-- 다를 가능성이 더 크거나 비교하는 비용이 싼 필드를 먼저 비교하자
-- `equals()`를 재정의할 땐 반드시 `hashCode()`도 재정의하자
-- 인자는 항상 `Object` 타입으로 두자
+    static class MyResource implements AutoCloseable {
+
+        public void use() {
+            throw new RuntimeException("use exception");
+        }
+
+        @Override
+        public void close() throws Exception {
+            throw new RuntimeException("close exception");
+        }
+    }
+}
+```
+
+이번엔 `try-with-resources`를 사용하였다.
+
+![image](https://github.com/4k-study/book-effective-java/assets/68289543/41c40abd-bb18-4d0a-9965-ec74555c98b0)
+
+결과는 먼저 발생한 `use()` 메소드의 예외가 추적되었고, `close()` 메소드 호출 시 발생한 예외도 Suppressed로 출력되었다.
+
+```java
+try (MyResource resource = new MyResource()) {
+    resource.use();
+} catch (RuntimeException e) {
+    // ...
+}
+```
+
+`try-with-resources`도 catch문을 사용할 수 있다.
+
+### 정리
+
+회수해야 하는 자원을 사용할 때 `try-with-resources`문을 사용하자. 다음과 같은 장점이 있다.
+
+- 코드가 간결하여 가독성이 좋아진다.
+- 만들어지는 예외 정보가 더 유용하다.
