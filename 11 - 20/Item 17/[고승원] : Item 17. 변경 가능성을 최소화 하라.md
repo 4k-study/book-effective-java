@@ -31,12 +31,42 @@ Complex 같은 클래스도 불변 클래스로 설계되어 계산을 하고도
 * 가변 동반 클래스 : package-priavte 한 메서드를 만들어 계산할 때마다 매번 객체를 생성하지 않도록 한다.
 
 ```java
-BigInteger(int[] magnitude, int signum) {
-        this.signum = (magnitude.length == 0 ? 0 : signum);
-        this.mag = magnitude;
-        if (mag.length >= MAX_MAG_LENGTH) {
-            checkRange();
+BigInteger multiply(long v) {
+        if (v == 0 || signum == 0)
+          return ZERO;
+        if (v == BigDecimal.INFLATED)
+            return multiply(BigInteger.valueOf(v));
+        int rsign = (v > 0 ? signum : -signum);
+        if (v < 0)
+            v = -v;
+        long dh = v >>> 32;      // higher order bits
+        long dl = v & LONG_MASK; // lower order bits
+
+        int xlen = mag.length;
+        int[] value = mag;
+        int[] rmag = (dh == 0L) ? (new int[xlen + 1]) : (new int[xlen + 2]);
+        long carry = 0;
+        int rstart = rmag.length - 1;
+        for (int i = xlen - 1; i >= 0; i--) {
+            long product = (value[i] & LONG_MASK) * dl + carry;
+            rmag[rstart--] = (int)product;
+            carry = product >>> 32;
         }
+        rmag[rstart] = (int)carry;
+        if (dh != 0L) {
+            carry = 0;
+            rstart = rmag.length - 2;
+            for (int i = xlen - 1; i >= 0; i--) {
+                long product = (value[i] & LONG_MASK) * dh +
+                    (rmag[rstart] & LONG_MASK) + carry;
+                rmag[rstart--] = (int)product;
+                carry = product >>> 32;
+            }
+            rmag[0] = (int)carry;
+        }
+        if (carry == 0L)
+            rmag = java.util.Arrays.copyOfRange(rmag, 1, rmag.length);
+        return new BigInteger(rmag, rsign);
     }
 ```
 
