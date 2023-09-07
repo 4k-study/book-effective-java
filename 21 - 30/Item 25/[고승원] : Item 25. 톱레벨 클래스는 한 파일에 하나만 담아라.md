@@ -4,7 +4,7 @@
 
 즉 컴파일이 먼저 되는 클래스에 따라 값이 다르게 처리된다는 뜻이다.
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/4b36e261-a272-46e0-bb72-1d3c2abc0a30/9402ebf3-e575-485b-8e8d-206b278027f5/Untitled.png)
+![image](https://github.com/4k-study/book-effective-java/assets/85796588/1d418fc5-6976-410c-9ac4-50de6f580605)
 
 다행히 똑똑한 인텔리제이는 이를 막아준다.
 
