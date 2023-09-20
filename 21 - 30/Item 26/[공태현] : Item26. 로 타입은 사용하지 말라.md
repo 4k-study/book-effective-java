@@ -36,7 +36,7 @@ public static viod main(String[] args) {
 ```
 `methodA`를 호출하면서 매개변수로 `List<String>`을 사용한다면 컴파일 에러가 발생한다.
 ```java
-	public static viod main(String[] args) {
+public static viod main(String[] args) {
 	List<String> strings = List.of("a", "b", "c");
 	
 	methodB(strings);
@@ -68,7 +68,7 @@ public int method(List<?> list) {...}
 ```
 위 메소드는 모든 타입의 `List<>`를 매개변수로 받을 수 있다.
 
-`Set`과 `Set<>`의 차이는, `Set`에는 여러 타입의 원소를 넣을 수 있기 때문에 타입 불변식을 훼손하기 쉽다. 
+`Set`과 `Set<?>`의 차이는, `Set`에는 여러 타입의 원소를 넣을 수 있기 때문에 타입 불변식을 훼손하기 쉽다. 
 ```java
 public static void main(String[] args) {  
     List<String> strings = new ArrayList<>();  
@@ -85,7 +85,7 @@ public static void main(String[] args) {
 ```
 위 코드에서 `myList`에는 `String`타입과 `Integer` 타입의 원소가 모두 들어갔지만 컴파일 에러가 발생하지 않는다.
 
-반면, `Set<>`는 `null`을 제외한 어떤 원소도 넣을 수 없다.
+반면, `Set<?>`는 `null`을 제외한 어떤 원소도 넣을 수 없다.
 ```java
 List<?> myList = new ArrayList();  
 myList.add(null);  
